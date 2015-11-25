@@ -111,15 +111,10 @@ Target "AssemblyInfo" <| fun _ ->
 // Build the solution
 
 Target "Build" <| fun _ ->
-
+    let config = if isMono then "Release Mono" else "Release"
+    
     !!"src/Akka.sln"
-    |> MSBuildRelease "" "Rebuild"
-    |> ignore
-
-Target "BuildMono" <| fun _ ->
-
-    !!"src/Akka.sln"
-    |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
+    |> MSBuild "" "Rebuild" [("Configuration", config)]
     |> ignore
 
 //--------------------------------------------------------------------------------
@@ -188,12 +183,12 @@ Target "CopyOutput" <| fun _ ->
       "contrib/loggers/Akka.Logger.Serilog" 
       "contrib/loggers/Akka.Logger.CommonLogging"
       "contrib/loggers/Akka.Logger.log4net" 
-      "contrib/dependencyinjection/Akka.DI.Core"
-      "contrib/dependencyinjection/Akka.DI.AutoFac"
-      "contrib/dependencyinjection/Akka.DI.CastleWindsor"
-      "contrib/dependencyinjection/Akka.DI.Ninject"
-      "contrib/dependencyinjection/Akka.DI.Unity"
-      "contrib/dependencyinjection/Akka.DI.TestKit"
+      "contrib/dependencyInjection/Akka.DI.Core"
+      "contrib/dependencyInjection/Akka.DI.AutoFac"
+      "contrib/dependencyInjection/Akka.DI.CastleWindsor"
+      "contrib/dependencyInjection/Akka.DI.Ninject"
+      "contrib/dependencyInjection/Akka.DI.Unity"
+      "contrib/dependencyInjection/Akka.DI.TestKit"
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
@@ -218,37 +213,29 @@ Target "CleanTests" <| fun _ ->
 // Run tests
 
 open Fake.Testing
+
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
     let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
                                     "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" 
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
 
     mkdir testOutput
 
-    MSTest (fun p -> p) msTestAssemblies
+    if isMono = false then
+        MSTest (fun p -> p) msTestAssemblies
+        
     nunitTestAssemblies
     |> NUnit (fun p -> 
         {p with
             DisableShadowCopy = true; 
-            OutputFile = testOutput + @"\NUnitTestResults.xml"})
+            OutputFile = testOutput @@ "NUnitTestResults.xml"})
 
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit2
-        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
-        xunitTestAssemblies
-
-Target "RunTestsMono" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
-
-    mkdir testOutput
-
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
+        (fun p -> { p with XmlOutputPath = Some (testOutput @@ "XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput @@ "XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
         xunitTestAssemblies
 
 Target "MultiNodeTests" <| fun _ ->
@@ -616,9 +603,10 @@ Target "All" DoNothing
 "NBench" ==> "All"
 "Nuget" ==> "All"
 
-Target "AllTests" DoNothing //used for Mono builds, due to Mono 4.0 bug with FAKE / NuGet https://github.com/fsharp/fsharp/issues/427
-"BuildRelease" ==> "AllTests"
-"RunTests" ==> "AllTests"
-"MultiNodeTests" ==> "AllTests"
+Target "AllMono" DoNothing
+"BuildRelease" ==> "AllMono"
+"RunTests" ==> "AllMono"
+//"MultiNodeTests" ==> "AllMono"
+"NBench" ==> "AllMono"
 
 RunTargetOrDefault "Help"

@@ -27,9 +27,9 @@ popd  > /dev/null
 
 mono $SCRIPT_PATH/src/.nuget/NuGet.exe update -self
 
-mono $SCRIPT_PATH/src/.nuget/NuGet.exe install FAKE -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 3.28.8
+mono $SCRIPT_PATH/src/.nuget/NuGet.exe install FAKE -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 4.9.3
 
-mono $SCRIPT_PATH/src/.nuget/NuGet.exe install xunit.runners -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.0.0
+mono $SCRIPT_PATH/src/.nuget/NuGet.exe install xunit.runner.console -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.1.0
 mono $SCRIPT_PATH/src/.nuget/NuGet.exe install nunit.runners -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.6.4
 
 mono $SCRIPT_PATH/src/.nuget/NuGet.exe install NBench.Runner -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion
@@ -41,5 +41,6 @@ if ! [ -e $SCRIPT_PATH/src/packages/SourceLink.Fake/tools/SourceLink.fsx ] ; the
 fi
 
 export encoding=utf-8
+export MONO_DEBUG=dont-free-domains
 
 mono $SCRIPT_PATH/src/packages/FAKE/tools/FAKE.exe build.fsx "$@"
